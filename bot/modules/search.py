@@ -1,11 +1,11 @@
 import requests
 import itertools
 import time
+import html
 
 from urllib.parse import quote
 from telegram import InlineKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackQueryHandler
-from requests.exceptions import RequestException
 
 from bot import dispatcher, LOGGER, SEARCH_API_LINK
 from bot.helper.ext_utils.telegraph_helper import telegraph
@@ -82,15 +82,15 @@ def search(key, site, message):
             editMessage(msg, message, button)
         else:
             editMessage(f"No result found for <i>{key}</i> Torrent Site:- <i>{SITES.get(site)}</i>", message)
-    except (Exception, RequestException) as e:
+    except Exception as e:
         editMessage(str(e), message)
 
 def getResult(search_results, key, message):
     telegraph_content = []
-    msg = f"<h4>Search Result For {key}</h4><br><br>"
+    msg = f"<h4>Search Result For {key}</h4>"
     for index, result in enumerate(search_results, start=1):
         try:
-            msg += f"<code><a href='{result['Url']}'>{result['Name']}</a></code><br>"
+            msg += f"<code><a href='{result['Url']}'>{html.escape(result['Name'])}</a></code><br>"
             if "Files" in result.keys():
                 for subres in result['Files']:
                     msg += f"<b>Quality: </b>{subres['Quality']} | <b>Size: </b>{subres['Size']}<br>"

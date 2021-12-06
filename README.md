@@ -25,6 +25,8 @@ This is a Telegram Bot written in Python for mirroring files on the Internet to 
 - Search for torrents with Torrent Search API
 - Docker image support for `linux/amd64, linux/arm64, linux/arm/v7, linux/arm/v6` (**Note**: Use `anasty17/mltb-oracle:latest` for oracle or if u faced problem with arm64 docker run)
 - Update bot at startup and with restart command using `UPSTREAM_REPO`
+- Clone/Zip/Unzip/Count from gdtot links (main script from [Yusuf](https://github.com/oxosec)) and delete first cloned file from main drive or TeamDrive
+- Magnet link extractor by [VarnaX-279](https://github.com/VarnaX-279)
 - Many bugs have been fixed
 
 ## From Other Repositories
@@ -54,6 +56,10 @@ This is a Telegram Bot written in Python for mirroring files on the Internet to 
 # How to deploy?
 
 ## Prerequisites
+
+- Tutorial Video from A to Z:
+  - Thanks to [Wiszky](https://github.com/vishnoe115)
+<p><a href="https://www.youtube.com/watch?v=gFQWJ4ftt48"> <img src="https://img.shields.io/badge/See%20Video-black?style=for-the-badge&logo=YouTube" width="160""/></a></p>
 
 ### 1. Installing requirements
 
@@ -100,11 +106,11 @@ Fill up rest of the fields. Meaning of each field is discussed below:
 - `TELEGRAM_API`: This is to authenticate your Telegram account for downloading Telegram files. You can get this from https://my.telegram.org. **NOTE**: DO NOT put this in quotes.
 - `TELEGRAM_HASH`: This is to authenticate your Telegram account for downloading Telegram files. You can get this from https://my.telegram.org
 - `OWNER_ID`: The Telegram User ID (not username) of the Owner of the bot
-- `GDRIVE_FOLDER_ID`: This is the folder ID of the Google Drive Folder to which you want to upload all the mirrors.
+- `GDRIVE_FOLDER_ID`: This is the Folder/TeamDrive ID of the Google Drive Folder to which you want to upload all the mirrors.
 - `DOWNLOAD_DIR`: The path to the local folder where the downloads should be downloaded to
 - `DOWNLOAD_STATUS_UPDATE_INTERVAL`: A short interval of time in seconds after which the Mirror progress/status message is updated. (I recommend to keep it to `7` seconds at least)
 - `AUTO_DELETE_MESSAGE_DURATION`: Interval of time (in seconds), after which the bot deletes it's message (and command message) which is expected to be viewed instantly. (**NOTE**: Set to `-1` to never automatically delete messages)
-- `BASE_URL_OF_BOT`: (Required for Heroku to avoid sleep/idling) Valid BASE URL of app where the bot is deployed. Format of URL should be `http://myip` (where `myip` is the IP/Domain of your bot) or if you have chosen other port than `80` then fill in this format `http://myip:port`, for Heroku fill `https://yourappname.herokuapp.com` (**NOTE**: Don't add slash at the end), still got idling? You can use http://cron-job.org to ping your Heroku app.
+- `BASE_URL_OF_BOT`: (Required only for Heroku to avoid sleep/idling) Valid BASE URL of app where the bot is deployed. Format of URL should be `http://myip` (where `myip` is the IP/Domain of your bot) or if you have chosen other port than `80` then fill in this format `http://myip:port`, for Heroku fill `https://yourappname.herokuapp.com` (**NOTE**: Don't add slash at the end), still got idling? You can use http://cron-job.org to ping your Heroku app.
 </details>
 
 **2. Optional Fields**
@@ -112,38 +118,41 @@ Fill up rest of the fields. Meaning of each field is discussed below:
 <details>
     <summary><b>Click Here For More Details</b></summary>
 
-- `ACCOUNTS_ZIP_URL`: Only if you want to load your Service Account externally from an Index Link. Archive the accounts folder to a zip file. Fill this with the direct link of that file.
+- `ACCOUNTS_ZIP_URL`: Only if you want to load your Service Account externally from an Index Link or by any direct download link NOT webpage link. Archive the accounts folder to a zip file. Fill this with the direct download link of that file. If index need authentication so add direct download as shown below:
+  - `https://username:password@example.workers.dev/...`
 - `TOKEN_PICKLE_URL`: Only if you want to load your **token.pickle** externally from an Index Link. Fill this with the direct link of that file.
 - `MULTI_SEARCH_URL`: Check `drive_folder` setup [here](https://github.com/anasty17/mirror-leech-telegram-bot/tree/master#multi-search-ids). Write **drive_folder** file [here](https://gist.github.com/). Open the raw file of that gist, it's URL will be your required variable. Should be in this form after removing commit id: https://gist.githubusercontent.com/username/gist-id/raw/drive_folder
 - `YT_COOKIES_URL`: Youtube authentication cookies. Check setup [Here](https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl). Use gist raw link and remove commit id from the link, so you can edit it from gists only.
-- `NETRC_URL`: Use this incase you want to deploy heroku branch without filling `UPSTREAM_REPO` variable, since after restart this file will cloned from github as empty file. Use gist raw link and remove commit id from the link, so you can edit it from gists only.
-- `DATABASE_URL`: Your Database URL. See [Generate Database](https://github.com/anasty17/mirror-leech-telegram-bot/tree/master#generate-database) to generate database (**NOTE**: If you use database you can save your Sudo ID permanently using `/addsudo` command).
+- `NETRC_URL`: To create .netrc file contains authentication for aria2c and yt-dlp. Use gist raw link and remove commit id from the link, so you can edit it from gists only. **NOTE**: After editing .nterc you need to restart the docker or if deployed on heroku so restart dyno in case your edits related to aria2c authentication.
+  - **NOTE**: All above url variables used incase you want edit them in future easily without deploying again or if you want to deploy from public fork else you can add token.pickle, accounts folder, drive_folder, .netrc and cookies.txt directly to root.
+- `DATABASE_URL`: Your Database URL. See [Generate Database](https://github.com/anasty17/mirror-leech-telegram-bot/tree/master#generate-database) to generate database (**NOTE**: If you use database you can save your Sudo ID permanently).
 - `AUTHORIZED_CHATS`: Fill user_id and chat_id (not username) of groups/users you want to authorize. Separate them with space, Examples: `-0123456789 -1122334455 6915401739`.
 - `SUDO_USERS`: Fill user_id (not username) of users whom you want to give sudo permission. Separate them with space, Examples: `0123456789 1122334455 6915401739` (**NOTE**: If you want to save Sudo ID permanently without database, you must fill your Sudo Id here).
-- `IS_TEAM_DRIVE`: Set to `True` if `GDRIVE_FOLDER_ID` is from a Team Drive else `False` or Leave it empty. `Bool`
+- `IS_TEAM_DRIVE`: Set to `False` or leave it empty to get public google drive links else `True` so only who have access to your Folder/TeamDrive can open the links. `Bool`
 - `USE_SERVICE_ACCOUNTS`: (Leave empty if unsure) Whether to use Service Accounts or not. For this to work see [Using Service Accounts](https://github.com/anasty17/mirror-leech-telegram-bot#generate-service-accounts-what-is-service-account) section below.
-- `INDEX_URL`: Refer to https://gitlab.com/ParveenBhadooOfficial/Google-Drive-Index The URL should not have any trailing '/'
+- `INDEX_URL`: Refer to https://gitlab.com/ParveenBhadooOfficial/Google-Drive-Index The URL should not have any trailing '/' at the end.
 - `MEGA_API_KEY`: Mega.nz API key to mirror mega.nz links. Get it from [Mega SDK Page](https://mega.nz/sdk)
-- `MEGA_EMAIL_ID`: Your E-Mail ID used to sign up on mega.nz for using premium account (Leave though)
-- `MEGA_PASSWORD`: Your Password for your mega.nz account
+- `MEGA_EMAIL_ID`: E-Mail ID used to sign up on mega.nz for using premium account (Leave though)
+- `MEGA_PASSWORD`: Password for mega.nz account
 - `BLOCK_MEGA_FOLDER`: If you want to remove mega.nz folder support, set it to `True`. `Bool`
 - `BLOCK_MEGA_LINKS`: If you want to remove mega.nz mirror support, set it to `True`. `Bool`
 - `STOP_DUPLICATE`: (Leave empty if unsure) if this field is set to `True`, bot will check file in Drive, if it is present in Drive, downloading or cloning will be stopped. (**NOTE**: File will be checked using filename not file hash, so this feature is not perfect yet). `Bool`
 - `CLONE_LIMIT`: To limit the size of Google Drive folder/file which you can clone. Don't add unit, the default unit is `GB`.
 - `MEGA_LIMIT`: To limit the size of Mega download. Don't add unit, the default unit is `GB`.
 - `TORRENT_DIRECT_LIMIT`: To limit the Torrent/Direct mirror size. Don't add unit, the default unit is `GB`.
-- `ZIP_UNZIP_LIMIT`: To limit the size of mirroring as Zip or unzipmirror. Don't add unit, the default unit is `GB`.
-- `VIEW_LINK`: View Link button to open file Index Link in browser instead of direct download link, you can figure out if it's compatible with your Index code or not, open any video from you Index and check if its URL ends with `?a=view`, if yes make it `True` it will work (Compatible with https://gitlab.com/ParveenBhadooOfficial/Google-Drive-Index Code). `Bool`
+- `ZIP_UNZIP_LIMIT`: To limit the size of zip and unzip commands. Don't add unit, the default unit is `GB`.
+- `VIEW_LINK`: View Link button to open file Index Link in browser instead of direct download link, you can figure out if it's compatible with your Index code or not, open any video from you Index and check if its URL ends with `?a=view`, if yes make it `True`, compatible with [BhadooIndex](https://gitlab.com/ParveenBhadooOfficial/Google-Drive-Index) Code. `Bool`
 - `UPTOBOX_TOKEN`: Uptobox token to mirror uptobox links. Get it from [Uptobox Premium Account](https://uptobox.com/my_account).
 - `IGNORE_PENDING_REQUESTS`: If you want the bot to ignore pending requests after it restarts, set this to `True`. `Bool`
-- `STATUS_LIMIT`: Limit the no. of tasks shown in status message with button. (**NOTE**: Recommended limit is `4` tasks).
+- `STATUS_LIMIT`: Limit the no. of tasks shown in status message with buttons. (**NOTE**: Recommended limit is `4` tasks).
 - `IS_VPS`: (Only for VPS) Don't set this to `True` even if you are using VPS, unless facing error with web server. `Bool`
-- `SERVER_PORT`: Only For VPS even if `IS_VPS` is `False` --> Base URL Port
+- `SERVER_PORT`: Only For VPS even if `IS_VPS` is `False`, which is the **BASE_URL_OF_BOT** Port.
+- `WEB_PINCODE`: If empty or `False` means no more pincode required while qbit web selection. `Bool`
 - `TG_SPLIT_SIZE`: Size of split in bytes, leave it empty for max size `2GB`.
 - `AS_DOCUMENT`: Default Telegram file type upload. Empty or `False` means as media. `Bool`
 - `EQUAL_SPLITS`: Split files larger than **TG_SPLIT_SIZE** into equal parts size (Not working with zip cmd). `Bool`
 - `CUSTOM_FILENAME`: Add custom word to leeched file name.
-- `UPSTREAM_REPO`: Your github repository link, If your repo is private add  `https://{githubtoken}@github.com/{username}/{reponame}` format. Get token from [Github settings](https://github.com/settings/tokens). (**NOTE**: Any change in docker or requirements you need to deploy again with updated repo to take effect)
+- `UPSTREAM_REPO`: Your github repository link, If your repo is private add  `https://{githubtoken}@github.com/{username}/{reponame}` format. Get token from [Github settings](https://github.com/settings/tokens). **NOTE**: Any change in docker or requirements you need to deploy/build again with updated repo to take effect - DON'T delete .gitignore file.
 - `SHORTENER_API`: Fill your Shortener API key.
 - `SHORTENER`: Shortener URL.
   - Supported URL Shorteners:
@@ -151,7 +160,7 @@ Fill up rest of the fields. Meaning of each field is discussed below:
 - `SEARCH_API_LINK`: Search api app link. Get your api from deploying this [repository](https://github.com/Ryuk-me/Torrents-Api). **Note**: Don't add slash at the end.
   - Supported Sites:
   >rarbg, 1337x, yts, etzv, tgx, torlock, piratebay, nyaasi, ettv
-- `PHPSESSID` and `CRYPT`: Cookies for gdtot google drive link generator. Check setup [here](https://github.com/anasty17/mirror-leech-telegram-bot/tree/master#Gdtot Cookies).
+- `PHPSESSID` and `CRYPT`: Cookies for gdtot google drive link generator. Follow these [steps](https://github.com/anasty17/mirror-leech-telegram-bot/tree/master#gdtot-cookies).
 
 Three buttons are already added including Drive Link, Index Link, and View Link, you can add extra buttons, if you don't know what are the below entries, simply leave them empty.
 - `BUTTON_FOUR_NAME`:
@@ -267,35 +276,35 @@ sudo docker image prune -a
 ## Bot commands to be set in [@BotFather](https://t.me/BotFather)
 
 ```
-mirror - Start mirroring
-zipmirror - Start mirroring and upload as .zip
-unzipmirror - Extract files
-qbmirror - Start mirroring using qBittorrent
-qbzipmirror - Start mirroring and upload as .zip using qb
-qbunzipmirror - Extract files using qBittorrent
-leech - Leech Torrent/Direct link
-zipleech - Leech Torrent/Direct link and upload as .zip
-unzipleech - Leech Torrent/Direct link and extract
-qbleech - Leech Torrent/Magnet using qBittorrent
-qbzipleech - Leech Torrent/Magnet and upload as .zip using qb
-qbunzipleech - Leech Torrent and extract using qb
+mirror - Mirror
+zipmirror - Mirror and upload as zip
+unzipmirror - Mirror and extract files
+qbmirror - Mirror torrent using qBittorrent
+qbzipmirror - Mirror torrent and upload as zip using qb
+qbunzipmirror - Mirror torrent and extract files using qb
+leech - Leech
+zipleech - Leech and upload as zip
+unzipleech - Leech and extract files
+qbleech - Leech torrent using qBittorrent
+qbzipleech - Leech torrent and upload as zip using qb
+qbunzipleech - Leech torrent and extract using qb
 clone - Copy file/folder to Drive
 count - Count file/folder of Drive
 watch - Mirror yt-dlp supported link
-zipwatch - Mirror playlist link and upload as .zip
+zipwatch - Mirror yt-dlp supported link as zip
 leechwatch - Leech through yt-dlp supported link
-leechzipwatch - Leech playlist link and upload as .zip
+leechzipwatch - Leech yt-dlp support link as zip
 leechset - Leech settings
-setthumb - Set Thumbnail
+setthumb - Set thumbnail
 status - Get Mirror Status message
-list - [query] Search files in Drive
-search - [query] Search for torrents with API
+list - Search files in Drive
+search - Search for torrents with API
 cancel - Cancel a task
 cancelall - Cancel all tasks
-del - [drive_url] Delete file from Drive
-log - Get the Bot Log [owner/sudo only]
-shell - Run commands in Shell [owner only]
-restart - Restart the Bot [owner/sudo only]
+del - Delete file/folder from Drive
+log - Get the Bot Log
+shell - Run commands in Shell
+restart - Restart the Bot
 stats - Bot Usage Stats
 ping - Ping the Bot
 help - All cmds with description
@@ -401,18 +410,28 @@ MyTdName2 folderID/tdID IndexLink(if available)
 ```
 -----
 
-## Yt-dlp and Index Authentication Using .netrc File
-For using your premium accounts in yt-dlp or for protected Index Links, edit the netrc file according to following format:
+## Yt-dlp and Aria2c Authentication Using .netrc File
+For using your premium accounts in yt-dlp or for protected Index Links, create .netrc file according to following format:
+
+**Note**: Create .netrc and not netrc, this file will be hidden, so view hidden files to edit it after creation.
+
+Format:
 ```
 machine host login username password my_password
 ```
-**Note**: For `youtube` authentication use [cookies.txt](https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl) file.
+Example:
+```
+machine instagram login anas.tayyar password mypassword
+```
+**Instagram Note**: You must login even if you want to download public posts and after first try you must confirm that this was you logged in from different ip(you can confirm from phone app).
+
+**Youtube Note**: For `youtube` authentication use [cookies.txt](https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl) file.
 
 For Index Link with only password without username, even http auth will not work, so this is the solution.
 ```
 machine example.workers.dev password index_password
 ```
-Where host is the name of extractor (eg. Twitch). Multiple accounts of different hosts can be added each separated by a new line.
+Where host is the name of extractor (eg. instagram, Twitch). Multiple accounts of different hosts can be added each separated by a new line.
 
 -----
 

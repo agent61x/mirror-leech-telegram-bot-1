@@ -56,10 +56,9 @@ class YoutubeDLHelper(DownloadHelper):
         self.opts = {'progress_hooks': [self.__onDownloadProgress],
                      'logger': MyLogger(self),
                      'usenetrc': True,
-                     'continuedl': True,
                      'embedsubtitles': True,
                      'prefer_ffmpeg': True,
-                     'cookiefile': 'cookies.txt' }
+                     'cookiefile': 'cookies.txt'}
 
     @property
     def download_speed(self):
@@ -165,7 +164,7 @@ class YoutubeDLHelper(DownloadHelper):
         self.opts['format'] = qual
         if qual == 'ba/b':
           self.opts['postprocessors'] = [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '340'}]
-        LOGGER.info(f"Downloading with YT-DL: {link}")
+        LOGGER.info(f"Downloading with YT-DLP: {link}")
         self.extractMetaData(link, name)
         if self.is_cancelled:
             return

@@ -34,13 +34,11 @@ cookies = {"PHPSESSID": PHPSESSID, "crypt": CRYPT}
 
 def direct_link_generator(link: str):
     """ direct links generator """
-    if not link:
-        raise DirectDownloadLinkException("No links found!")
-    elif 'youtube.com' in link or 'youtu.be' in link:
-        raise DirectDownloadLinkException(f"Use /{BotCommands.WatchCommand} to mirror Youtube link\nUse /{BotCommands.ZipWatchCommand} to make zip of Youtube playlist")
+    if 'youtube.com' in link or 'youtu.be' in link:
+        raise DirectDownloadLinkException(f"ERROR: Use /{BotCommands.WatchCommand} to mirror Youtube link\nUse /{BotCommands.ZipWatchCommand} to make zip of Youtube playlist")
     elif 'zippyshare.com' in link:
         return zippy_share(link)
-    elif 'yadi.sk' in link or 'disk.yandex.com.ru' in link:
+    elif 'yadi.sk' in link or 'disk.yandex.com' in link:
         return yandex_disk(link)
     elif 'mediafire.com' in link:
         return mediafire(link)
@@ -75,6 +73,8 @@ def direct_link_generator(link: str):
     elif 'layarkacaxxi.icu' in link:
         return fembed(link)
     elif 'sbembed.com' in link:
+        return sbembed(link)
+    elif 'watchsb.com' in link:
         return sbembed(link)
     elif 'streamsb.net' in link:
         return sbembed(link)
@@ -135,7 +135,7 @@ def yandex_disk(url: str) -> str:
     """ Yandex.Disk direct link generator
     Based on https://github.com/wldhx/yadisk-direct """
     try:
-        link = re.findall(r'\b(https?://.*(yadi|disk)\.(sk|yandex)*(|com.ru)\S+)', url)[0][0]
+        link = re.findall(r'\b(https?://(yadi.sk|disk.yandex.com)\S+)', url)[0][0]
     except IndexError:
         return "No Yandex.Disk links found\n"
     api = 'https://cloud-api.yandex.net/v1/disk/public/resources/download?public_key={}'
@@ -461,11 +461,10 @@ def gdtot(url: str) -> str:
     s2 = BeautifulSoup(requests.get(s1, headers=headers, cookies=cookies).content, 'html.parser').find('meta').get('content').split('=',1)[1]
     headers['referer'] = s1
     s3 = BeautifulSoup(requests.get(s2, headers=headers, cookies=cookies).content, 'html.parser').find('div', align="center")
-    if s3 is None:
-        s3 = BeautifulSoup(requests.get(s2, headers=headers, cookies=cookies).content, 'html.parser')
-        status = s3.find('h4').text
-        raise DirectDownloadLinkException(f"ERROR: {status}")
-    else:
-        gdlink = s3.find('a', class_="btn btn-outline-light btn-user font-weight-bold").get('href')
-        return gdlink
+    if s3 is not None:
+        return s3.find('a', class_="btn btn-outline-light btn-user font-weight-bold").get('href')
+
+    s3 = BeautifulSoup(requests.get(s2, headers=headers, cookies=cookies).content, 'html.parser')
+    status = s3.find('h4').text
+    raise DirectDownloadLinkException(f"ERROR: {status}")
 

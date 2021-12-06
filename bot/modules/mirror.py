@@ -19,11 +19,12 @@ from bot import Interval, INDEX_URL, BUTTON_FOUR_NAME, BUTTON_FOUR_URL, BUTTON_F
                 dispatcher, DOWNLOAD_DIR, download_dict, download_dict_lock, ZIP_UNZIP_LIMIT, TG_SPLIT_SIZE, LOGGER
 from bot.helper.ext_utils import fs_utils, bot_utils
 from bot.helper.ext_utils.shortenurl import short_url
-from bot.helper.ext_utils.exceptions import DirectDownloadLinkException, NotSupportedExtractionArchive
+from bot.helper.ext_utils.exceptions import DirectDownloadLinkException, DirectTorrentMagnetException, NotSupportedExtractionArchive
 from bot.helper.mirror_utils.download_utils.aria2_download import AriaDownloadHelper
 from bot.helper.mirror_utils.download_utils.mega_downloader import MegaDownloadHelper
 from bot.helper.mirror_utils.download_utils.qbit_downloader import QbitTorrent
 from bot.helper.mirror_utils.download_utils.direct_link_generator import direct_link_generator
+from bot.helper.mirror_utils.download_utils.direct_magnet_generator import direct_magnet_generator
 from bot.helper.mirror_utils.download_utils.telegram_downloader import TelegramDownloadHelper
 from bot.helper.mirror_utils.status_utils import listeners
 from bot.helper.mirror_utils.status_utils.extract_status import ExtractStatus
@@ -86,10 +87,12 @@ class MirrorListener(listeners.MirrorListeners):
                 LOGGER.info(f'Zip: orig_path: {m_path}, zip_path: {path}')
                 if pswd is not None:
                     if self.isLeech and int(size) > TG_SPLIT_SIZE:
+                        path = m_path + "_zip"
                         subprocess.run(["7z", f"-v{TG_SPLIT_SIZE}b", "a", "-mx=0", f"-p{pswd}", path, m_path])
                     else:
                         subprocess.run(["7z", "a", "-mx=0", f"-p{pswd}", path, m_path])
                 elif self.isLeech and int(size) > TG_SPLIT_SIZE:
+                    path = m_path + "_zip"
                     subprocess.run(["7z", f"-v{TG_SPLIT_SIZE}b", "a", "-mx=0", path, m_path])
                 else:
                     subprocess.run(["7z", "a", "-mx=0", path, m_path])
@@ -251,12 +254,10 @@ class MirrorListener(listeners.MirrorListeners):
             return
         with download_dict_lock:
             msg = f'<b>Name: </b><code>{download_dict[self.uid].name()}</code>\n\n<b>Size: </b>{size}'
+            msg += f'\n\n<b>Type: </b>{typ}'
             if os.path.isdir(f'{DOWNLOAD_DIR}/{self.uid}/{download_dict[self.uid].name()}'):
-                msg += '\n\n<b>Type: </b>Folder'
                 msg += f'\n<b>SubFolders: </b>{folders}'
                 msg += f'\n<b>Files: </b>{files}'
-            else:
-                msg += f'\n\n<b>Type: </b>{typ}'
             buttons = button_build.ButtonMaker()
             link = short_url(link)
             buttons.buildbutton("☁️ Drive Link", link)
@@ -385,14 +386,47 @@ def _mirror(bot, update, isZip=False, extract=False, isQbit=False, isLeech=False
             link = f'{link[0]}://{ussr}:{pssw}@{link[1]}'
         except IndexError:
             pass
-    LOGGER.info(link)
+
     if not bot_utils.is_url(link) and not bot_utils.is_magnet(link) and not os.path.exists(link):
-        help_msg = "Send link along with command line or by reply\n"
-        help_msg += "<b>Examples:</b> \n<code>/command</code> link |newname(TG files or Direct inks) pswd: mypassword(zip/unzip)"
-        help_msg += "\nBy replying to link: <code>/command</code> |newname(TG files or Direct inks) pswd: mypassword(zip/unzip)"
-        help_msg += "\nFor Direct Links Authorization: <code>/command</code> link |newname pswd: mypassword\nusername\npassword (Same with by reply)"
+        help_msg = "<b>Send link along with command line:</b>"
+        help_msg += "\n<code>/command</code> {link} |newname pswd: mypassword [𝚣𝚒𝚙/𝚞𝚗𝚣𝚒𝚙]"
+        help_msg += "\n\n<b>By replying to link or file:</b>"
+        help_msg += "\n<code>/command</code> |newname pswd: mypassword [𝚣𝚒𝚙/𝚞𝚗𝚣𝚒𝚙]"
+        help_msg += "\n\n<b>Direct link authorization:</b>"
+        help_msg += "\n<code>/command</code> {link} |newname pswd: mypassword\nusername\npassword"
+        help_msg += "\n\n<b>Qbittorrent selection:</b>"
+        help_msg += "\n<code>/qbcommand</code> <b>s</b> {link} or by replying to {file}"
         return sendMessage(help_msg, bot, update)
-    elif bot_utils.is_url(link) and not bot_utils.is_magnet(link) and not os.path.exists(link) and isQbit:
+
+    LOGGER.info(link)
+    gdtot_link = bot_utils.is_gdtot_link(link)
+
+    if not os.path.exists(link) and not bot_utils.is_mega_link(link) \
+       and not bot_utils.is_gdrive_link(link) and not bot_utils.is_magnet(link):
+        headers = None
+        try:
+            res = requests.head(link, allow_redirects=True)
+            headers = res.headers.get('content-type')
+        except:
+            pass
+        if headers is not None and 'text/html' in headers:
+            is_direct = False
+            try:
+                link = direct_link_generator(link)
+                is_direct = True
+            except DirectDownloadLinkException as e:
+                LOGGER.info(str(e))
+                if str(e).startswith('ERROR:'):
+                    return sendMessage(str(e), bot, update)
+            if not is_direct:
+                try:
+                    link = direct_magnet_generator(link)
+                except DirectTorrentMagnetException as e:
+                    LOGGER.info(str(e))
+                    if str(e).startswith('ERROR:'):
+                        return sendMessage(str(e), bot, update)
+
+    if isQbit and not bot_utils.is_magnet(link) and not os.path.exists(link):
         try:
             resp = requests.get(link)
             if resp.status_code == 200:
@@ -402,21 +436,9 @@ def _mirror(bot, update, isZip=False, extract=False, isQbit=False, isLeech=False
             else:
                 sendMessage(f"ERROR: link got HTTP response: {resp.status_code}", bot, update)
                 return
-        except RequestException as e:
+        except Exception as e:
             LOGGER.error(str(e))
             return
-    elif not os.path.exists(link) and not bot_utils.is_mega_link(link) and not bot_utils.is_gdrive_link(link) and not bot_utils.is_magnet(link):
-        try:
-            gdtot_link = bot_utils.is_gdtot_link(link)
-            link = direct_link_generator(link)
-        except DirectDownloadLinkException as e:
-            LOGGER.info(e)
-            if "ERROR:" in str(e):
-                sendMessage(str(e), bot, update)
-                return
-            if "Youtube" in str(e):
-                sendMessage(str(e), bot, update)
-                return
 
     if bot_utils.is_gdrive_link(link):
         if not isZip and not extract and not isLeech:

@@ -14,7 +14,6 @@ import telegram.ext as tg
 from pyrogram import Client
 from psycopg2 import Error
 from dotenv import load_dotenv
-from requests.exceptions import RequestException
 
 faulthandler.enable()
 
@@ -47,7 +46,7 @@ try:
                 f.close()
         else:
             logging.error(f"Failed to download .netrc {res.status_code}")
-    except RequestException as e:
+    except Exception as e:
         logging.error(str(e))
 except KeyError:
     pass
@@ -62,10 +61,14 @@ PORT = os.environ.get('PORT', SERVER_PORT)
 web = subprocess.Popen([f"gunicorn wserver:start_server --bind 0.0.0.0:{PORT} --worker-class aiohttp.GunicornWebWorker"], shell=True)
 alive = subprocess.Popen(["python3", "alive.py"])
 nox = subprocess.Popen(["qbittorrent-nox", "--profile=."])
+if not os.path.exists('.netrc'):
+    subprocess.run(["touch", ".netrc"])
+subprocess.run(["cp", ".netrc", "/root/.netrc"])
 subprocess.run(["chmod", "600", ".netrc"])
 subprocess.run(["chmod", "+x", "aria.sh"])
 subprocess.run(["./aria.sh"], shell=True)
 time.sleep(0.5)
+
 Interval = []
 DRIVES_NAMES = []
 DRIVES_IDS = []
@@ -110,6 +113,23 @@ trackerslist = "\n\n".join(trackerslist)
 get_client().application.set_preferences({"add_trackers":f"{trackerslist}"})
 """
 
+def aria2c_init():
+    try:
+        if not os.path.isfile(".restartmsg"):
+            logging.info("Initializing Aria2c")
+            link = "https://releases.ubuntu.com/21.10/ubuntu-21.10-desktop-amd64.iso.torrent"
+            path = "/usr/src/app/"
+            aria2.add_uris([link], {'dir': path})
+            time.sleep(3)
+            downloads = aria2.get_downloads()
+            time.sleep(30)
+            for download in downloads:
+                aria2.remove([download], force=True, files=True)
+    except Exception as e:
+        logging.error(f"Aria2c initializing error: {e}")
+        pass
+
+threading.Thread(target=aria2c_init).start()
 
 DOWNLOAD_DIR = None
 BOT_TOKEN = None
@@ -336,6 +356,11 @@ try:
 except KeyError:
     BLOCK_MEGA_LINKS = False
 try:
+    WEB_PINCODE = getConfig('WEB_PINCODE')
+    WEB_PINCODE = WEB_PINCODE.lower() == 'true'
+except KeyError:
+    WEB_PINCODE = False
+try:
     SHORTENER = getConfig('SHORTENER')
     SHORTENER_API = getConfig('SHORTENER_API')
     if len(SHORTENER) == 0 or len(SHORTENER_API) == 0:
@@ -396,7 +421,7 @@ try:
                 f.close()
         else:
             logging.error(f"Failed to download token.pickle, link got HTTP response: {res.status_code}")
-    except RequestException as e:
+    except Exception as e:
         logging.error(str(e))
 except KeyError:
     pass
@@ -413,7 +438,7 @@ try:
                     f.close()
             else:
                 logging.error(f"Failed to download accounts.zip, link got HTTP response: {res.status_code}")
-        except RequestException as e:
+        except Exception as e:
             logging.error(str(e))
             raise KeyError
         subprocess.run(["unzip", "-q", "-o", "accounts.zip"])
@@ -432,7 +457,7 @@ try:
                 f.close()
         else:
             logging.error(f"Failed to download drive_folder, link got HTTP response: {res.status_code}")
-    except RequestException as e:
+    except Exception as e:
         logging.error(str(e))
 except KeyError:
     pass
@@ -448,7 +473,7 @@ try:
                 f.close()
         else:
             logging.error(f"Failed to download cookies.txt, link got HTTP response: {res.status_code}")
-    except RequestException as e:
+    except Exception as e:
         logging.error(str(e))
 except KeyError:
     pass
