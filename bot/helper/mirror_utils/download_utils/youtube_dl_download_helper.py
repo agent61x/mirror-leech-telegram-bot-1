@@ -154,16 +154,22 @@ class YoutubeDLHelper(DownloadHelper):
             self.onDownloadError("Download Stopped by User!")
 
     def add_download(self, link, path, name, qual, playlist):
-        if playlist == "true":
+        if playlist:
             self.opts['ignoreerrors'] = True
         if "hotstar" in link or "sonyliv" in link:
             self.opts['geo_bypass_country'] = 'IN'
         self.__gid = ''.join(random.SystemRandom().choices(string.ascii_letters + string.digits, k=10))
         self.__onDownloadStart()
         sendStatusMessage(self.__listener.update, self.__listener.bot)
+        if qual.startswith('ba/b'):
+            audio_info = qual.split('-')
+            qual = audio_info[0]
+            if len(audio_info) == 2:
+                rate = audio_info[1]
+            else:
+                rate = 320
+            self.opts['postprocessors'] = [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': f'{rate}'}]
         self.opts['format'] = qual
-        if qual == 'ba/b':
-          self.opts['postprocessors'] = [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '340'}]
         LOGGER.info(f"Downloading with YT-DLP: {link}")
         self.extractMetaData(link, name)
         if self.is_cancelled:
