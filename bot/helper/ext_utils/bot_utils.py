@@ -4,6 +4,8 @@ import time
 import math
 import psutil
 import shutil
+import requests
+import urllib.request
 
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot import dispatcher, download_dict, download_dict_lock, STATUS_LIMIT, botStartTime, LOGGER
@@ -121,7 +123,7 @@ def get_readable_message():
             tasks = len(download_dict)
             global pages
             pages = math.ceil(tasks/STATUS_LIMIT)
-            if PAGE_NO > pages:
+            if PAGE_NO > pages and pages != 0:
                 globals()['COUNT'] -= STATUS_LIMIT
                 globals()['PAGE_NO'] -= 1
             START = COUNT
@@ -273,6 +275,22 @@ def new_thread(fn):
         return thread
 
     return wrapper
+
+def get_content_type(link: str):
+    try:
+        res = requests.head(link, allow_redirects=True, timeout=5)
+        content_type = res.headers.get('content-type')
+    except:
+        content_type = None
+
+    if content_type is None:
+        try:
+            res = urllib.request.urlopen(link, timeout=5)
+            info = res.info()
+            content_type = info.get_content_type()
+        except:
+            content_type = None
+    return content_type
 
 status_handler = CallbackQueryHandler(turn, pattern="status", run_async=True)
 dispatcher.add_handler(status_handler)
