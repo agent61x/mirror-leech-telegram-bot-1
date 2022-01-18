@@ -1,10 +1,10 @@
-import requests
 import itertools
-import time
-import html
-import threading
-import qbittorrentapi as qba
 
+from qbittorrentapi import SearchAPIMixIn, Client as qbClient
+from requests import get as rget
+from time import sleep
+from threading import Thread
+from html import escape
 from urllib.parse import quote
 from telegram import InlineKeyboardMarkup
 from telegram.ext import CommandHandler, CallbackQueryHandler
@@ -21,24 +21,29 @@ PLUGINS = []
 
 SITES = {
     "1337x": "1337x",
-    "nyaasi": "NyaaSi",
     "yts": "YTS",
-    "piratebay": "PirateBay",
-    "torlock": "Torlock",
-    "eztv": "EzTvio",
+    "eztv": "EzTv",
     "tgx": "TorrentGalaxy",
+    "torlock": "Torlock",
+    "piratebay": "PirateBay",
+    "nyaasi": "NyaaSi",
     "rarbg": "Rarbg",
     "ettv": "Ettv",
     "zooqle": "Zooqle",
     "kickass": "KickAss",
     "bitsearch": "Bitsearch",
+    "glodls": "Glodls",
+    "magnetdl": "MagnetDL",
+    "limetorrent": "LimeTorrent",
+    "torrentfunk": "TorrentFunk",
+    "torrentproject": "TorrentProject",
     "all": "All"
 }
 
 SEARCH_LIMIT = 200
 
-def _srch_client() -> qba.SearchAPIMixIn:
-    return qba.Client(host="localhost", port=8090)
+def _srch_client() -> SearchAPIMixIn:
+    return qbClient(host="localhost", port=8090)
 
 def torser(update, context):
     user_id = update.message.from_user.id
@@ -87,7 +92,7 @@ def torserbut(update, context):
             editMessage(f"<b>Searching for <i>{key}</i>\nTorrent Site:- <i>{SITES.get(site)}</i></b>", message)
         else:
             editMessage(f"<b>Searching for <i>{key}</i>\nTorrent Site:- <i>{site.capitalize()}</i></b>", message)
-        threading.Thread(target=_search, args=(key, site, message, tool)).start()
+        Thread(target=_search, args=(key, site, message, tool)).start()
     else:
         query.answer()
         editMessage("Search has been canceled!", message)
@@ -97,7 +102,7 @@ def _search(key, site, message, tool):
     if tool == 'api':
         api = f"{SEARCH_API_LINK}/api/{site}/{key}"
         try:
-            resp = requests.get(api)
+            resp = rget(api)
             search_results = resp.json()
             if site == "all":
                 search_results = list(itertools.chain.from_iterable(search_results))
@@ -139,7 +144,7 @@ def _getResult(search_results, key, message, tool):
     for index, result in enumerate(search_results, start=1):
         if tool == 'api':
             try:
-                msg += f"<code><a href='{result['Url']}'>{html.escape(result['Name'])}</a></code><br>"
+                msg += f"<code><a href='{result['Url']}'>{escape(result['Name'])}</a></code><br>"
                 if "Files" in result.keys():
                     for subres in result['Files']:
                         msg += f"<b>Quality: </b>{subres['Quality']} | <b>Size: </b>{subres['Size']}<br>"
@@ -158,7 +163,7 @@ def _getResult(search_results, key, message, tool):
             except KeyError:
                 msg += "<br>"
         else:
-            msg += f"<a href='{result.descrLink}'>{html.escape(result.fileName)}</a><br>"
+            msg += f"<a href='{result.descrLink}'>{escape(result.fileName)}</a><br>"
             msg += f"<b>Size: </b>{get_readable_file_size(result.fileSize)}<br>"
             msg += f"<b>Seeders: </b>{result.nbSeeders} | <b>Leechers: </b>{result.nbLeechers}<br>"
             link = result.fileUrl
@@ -182,7 +187,7 @@ def _getResult(search_results, key, message, tool):
                 title='Mirror-leech-bot Torrent Search',
                 content=content
             )["path"] for content in telegraph_content]
-    time.sleep(0.5)
+    sleep(0.5)
     if len(path) > 1:
         editMessage(f"<b>Editing</b> {len(telegraph_content)} <b>Telegraph pages.</b>", message)
         _edit_telegraph(path, telegraph_content)
